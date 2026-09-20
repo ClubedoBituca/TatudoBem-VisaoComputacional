@@ -39,6 +39,23 @@ python tests/smoke_inference.py                # carga do modelo e inferência
 python tests/smoke_inference.py data/test/pipeline_check.mp4   # inferência em vídeo
 ```
 
+### Antes de gravar: teste o objeto
+
+O detector só conhece 80 classes do COCO. **Caixa de papelão não é uma delas** — foi
+testado: aparece como `tv` a 0.34, ou simplesmente não é detectada. Cone de obra, tapume
+e entulho também estão fora.
+
+Teste qualquer objeto com uma foto antes de gastar tempo filmando:
+
+```bash
+python tools/check_objeto.py foto_do_objeto.jpg
+python tools/check_objeto.py clipe.mp4        # amostra 12 frames do vídeo
+```
+
+Tire a foto do mesmo ângulo, distância e iluminação da gravação — a resposta muda com a
+perspectiva. Objetos que funcionam bem e são fáceis de conseguir num campus: **cadeira,
+mochila, bicicleta, vaso de planta, mala, banco**.
+
 ### Material de verificação
 
 Vídeos e imagens não são versionados. Para recriar o clipe usado pelos smoke tests:
