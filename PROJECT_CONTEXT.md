@@ -16,8 +16,9 @@ Mudou uma decisão de produto? Atualize aqui, não só no código.
    caminho alternativo previsto no código, mas não é o fluxo principal.
 2. **Detecção** — YOLO pré-treinado em COCO (`yolo11n.pt`). **Não há treinamento próprio.**
 3. **Zona acessível** — **detectada automaticamente** a partir do piso tátil direcional
-   (`src/lane.py`). O sistema localiza a faixa guia no próprio vídeo e deriva dela a faixa
-   livre de circulação, alargando simetricamente em torno do seu eixo. O polígono fixo em
+   (`src/lane.py`), com o modelo de segmentação `yolo11n_tactile.pt` (GuideTWSI, MIT) e
+   heurística de luminância como reserva. O sistema localiza a faixa guia no próprio vídeo e
+   deriva dela a faixa livre de circulação, alargando simetricamente em torno do seu eixo. O polígono fixo em
    `config/zones.json` é reserva, usado só quando a detecção falha.
 4. **Regra principal** — o **ponto inferior central da bounding box** determina se o objeto
    está dentro da zona de circulação. Esse ponto aproxima onde o objeto toca o chão; o

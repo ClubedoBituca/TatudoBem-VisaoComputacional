@@ -5,7 +5,9 @@ Aqui ficam só as regras de como mexer no código.
 
 ## Invariantes — não quebrar sem combinar com o time
 
-1. **Nenhum treinamento de modelo.** Só pesos pré-treinados COCO (`yolo11n.pt`).
+1. **Nenhum treinamento de modelo.** Só pesos pré-treinados: `yolo11n.pt` (COCO, objetos) e
+   `yolo11n_tactile.pt` (GuideTWSI, piso tátil — MIT). Adicionar um terceiro modelo exige
+   combinar com o time.
 2. **A regra espacial usa o ponto inferior central da bounding box.** Trocar para centro da
    caixa, IoU com o polígono ou máscara de segmentação é mudança de produto, não refatoração.
 3. **Bloqueio exige N frames consecutivos.** Não reportar barreira a partir de um frame só.
@@ -34,6 +36,7 @@ Quatro pessoas trabalham em paralelo. Antes de editar, confira de quem é o arqu
 |---|---|
 | `src/capture.py`, `src/detector.py` | 1 — Detecção |
 | `src/lane.py`, `tools/detect_lane.py` | compartilhado — avisar no grupo ao alterar |
+| `models/*.pt` | não versionados; ver README para baixar |
 | `src/blockage.py` | 2 — Regra espacial |
 | `src/events.py`, `src/ui.py`, `app.py` | 3 — Interface |
 | `tests/` | 4 — Testes |

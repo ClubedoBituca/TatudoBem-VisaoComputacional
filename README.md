@@ -89,7 +89,31 @@ python tools/detect_lane.py data/samples/livre.mp4
 python tools/detect_lane.py data/samples/livre.mp4 --ratio 5
 ```
 
-Quatro passos, só com OpenCV e NumPy:
+### Método principal: modelo de segmentação treinado
+
+O sistema usa **`yolo11n_tactile.pt`**, um YOLOv11n-seg treinado para segmentar piso tátil,
+publicado pelo projeto [GuideTWSI](https://guidedogrobot-tactile.github.io/) (DARoS Lab, UMass)
+sob **licença MIT**. Baixar:
+
+```bash
+curl -sL -o models/yolo11n_tactile.pt \
+  https://raw.githubusercontent.com/DARoSLab/GuideTWSI/master/model_weights/yolo11n_tactile.pt
+```
+
+A máscara do modelo é usada apenas para **medir** a faixa; a geometria (eixo, largura em
+perspectiva, alargamento simétrico) é a mesma do método clássico. Duas vantagens concretas
+medidas nos nossos clipes:
+
+- **Precisão:** erro de eixo de `0,0001` no `obstruido.mp4` contra `0,0030` da heurística.
+- **`y_top` vem da própria máscara**, não de um valor fixo. É o que faz funcionar no
+  `objetos_variaveis.mp4`, gravado de outra posição, onde o piso só aparece no terço
+  inferior — ali a heurística dava eixo `0,321` (errado) e o modelo dá `0,509`.
+
+Desligue com `lane.use_model = false` em `config/zones.json` para voltar à heurística.
+
+### Método reserva: heurística de luminância
+
+Usado automaticamente quando o modelo não encontra a faixa. Quatro passos, só com OpenCV e NumPy:
 
 1. **Fundo** — câmera estática mais mediana temporal de 25 frames dá o corredor sem quem
    estava passando. Objeto parado permanece, e tudo bem: ele é obstáculo, não ruído.
@@ -110,8 +134,10 @@ escolha de engenharia, não citação de norma.
 deslocada, e o detector acompanhou — eixo em `0,468` contra `0,501` dos demais. Um polígono
 fixo teria errado a faixa nesse clipe.
 
-**Quando não funciona:** exige câmera estática, piso tátil visivelmente mais escuro que o
-piso ao redor e trecho reto. Corredor curvo, piso tátil de cor parecida com o piso ou
+**Quando não funciona:** a câmera precisa estar estática e o trecho, reto. Em
+`bicicleta_planta.mp4` um vaso grande cobre a faixa e **os dois métodos erram** — o sistema
+cai no polígono fixo. A heurística ainda exige piso tátil mais escuro que o piso ao redor;
+o modelo não. Corredor curvo, piso tátil de cor parecida com o piso ou
 câmera em movimento quebram a premissa — aí use `tools/draw_zone.py` e a zona fixa.
 
 ## Saída visual

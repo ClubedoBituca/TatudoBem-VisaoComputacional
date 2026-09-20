@@ -31,6 +31,13 @@ Limites conhecidos: exige camera estatica, piso tatil visivelmente mais escuro
 que o piso ao redor, e um trecho reto. Corredor curvo, piso tatil da mesma cor
 do piso ou camera em movimento quebram a premissa - nesses casos use o poligono
 manual de config/zones.json.
+
+ALTERNATIVA POR MODELO TREINADO (preferida): `detect_guide_lane_ml` usa o
+yolo11n_tactile.pt do projeto GuideTWSI, um YOLOv11n-seg treinado para segmentar
+piso tatil. Ele resolve os dois casos onde a heuristica falha - objeto cobrindo a
+faixa e enquadramento em que o piso so aparece no terco inferior - porque nao
+depende de contraste de luminancia nem de um y_top fixo. A heuristica acima fica
+como reserva para quando o modelo nao encontrar a faixa.
 """
 
 from __future__ import annotations
@@ -41,7 +48,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .config import load_config
+from .config import load_config, resolve_path
 
 Point = tuple[float, float]
 Polygon = list[Point]
@@ -253,8 +260,122 @@ def detect_guide_lane(
     )
 
 
+def _mascara_modelo(fundo: np.ndarray, model_path: str | Path, conf: float) -> np.ndarray:
+    """Uniao das mascaras de piso tatil previstas pelo modelo, no tamanho do frame."""
+    from ultralytics import YOLO
+
+    from .detector import disable_telemetry
+
+    disable_telemetry()
+    altura, largura = fundo.shape[:2]
+    resultado = YOLO(str(model_path)).predict(fundo, imgsz=640, conf=conf, verbose=False)[0]
+
+    mascara = np.zeros((altura, largura), dtype=bool)
+    if resultado.masks is None:
+        return mascara
+    for seg in resultado.masks.data.cpu().numpy():
+        mascara |= cv2.resize(seg, (largura, altura), interpolation=cv2.INTER_NEAREST).astype(bool)
+    return mascara
+
+
+def _ajuste_robusto(y: np.ndarray, x: np.ndarray) -> tuple[float, float]:
+    """Reta x = a*y + b com rejeicao iterativa de outliers."""
+    for _ in range(5):
+        coef = np.polyfit(y, x, 1)
+        residuo = np.abs(x - np.polyval(coef, y))
+        escala = max(1.0, 1.4826 * np.median(residuo))
+        manter = residuo < 2.5 * escala
+        if manter.sum() < 10:
+            break
+        y, x = y[manter], x[manter]
+    a, b = np.polyfit(y, x, 1)
+    return float(a), float(b)
+
+
+def detect_guide_lane_ml(
+    fundo: np.ndarray,
+    model_path: str | Path | None = None,
+    conf: float | None = None,
+    min_coverage: float | None = None,
+) -> GuideLane:
+    """Localiza a faixa guia com o modelo de segmentacao treinado.
+
+    Produz o mesmo `GuideLane` da heuristica, entao nada a jusante muda: a
+    mascara e apenas uma forma melhor de MEDIR a faixa, a geometria continua a
+    mesma. Duas diferencas importantes em relacao a heuristica:
+
+      * `y_top` sai da propria mascara, nao de um valor fixo. E o que permite
+        funcionar em enquadramento onde o piso so aparece no terco inferior.
+      * o eixo vem de um ajuste do centro da mascara linha a linha, em vez da
+        busca por cobertura - a mascara ja separa faixa de objeto, entao nao ha
+        mais o problema do feixe de retas empatadas.
+    """
+    cfg = load_config().get("lane", {})
+    model_path = model_path or cfg.get("model_path", "models/yolo11n_tactile.pt")
+    conf = conf if conf is not None else cfg.get("model_conf", 0.10)
+    min_coverage = min_coverage if min_coverage is not None else cfg.get("min_coverage", 0.80)
+
+    altura, largura = fundo.shape[:2]
+    mascara = _mascara_modelo(fundo, resolve_path(model_path), float(conf))
+    if not mascara.any():
+        raise LaneNotFound("O modelo nao encontrou piso tatil nesta cena.")
+
+    # Por linha: maior corrida continua da mascara. Corrida isolada e curta e
+    # ruido de segmentacao, nao a faixa.
+    observacoes: list[tuple[float, float, float]] = []
+    for y in range(altura):
+        xs = np.where(mascara[y])[0]
+        if len(xs) < 3:
+            continue
+        cortes = np.where(np.diff(xs) > 6)[0]
+        grupos = np.split(xs, cortes + 1)
+        maior = max(grupos, key=len)
+        if len(maior) < 3:
+            continue
+        observacoes.append((float(y), float(maior[0] + maior[-1]) / 2.0, float(len(maior))))
+
+    if len(observacoes) < 20:
+        raise LaneNotFound(f"Mascara com apenas {len(observacoes)} linhas uteis.")
+
+    dados = np.array(observacoes)
+    y_inicio = float(dados[:, 0].min())
+    cobertura = len(dados) / max(1.0, altura - y_inicio)
+    if cobertura < min_coverage:
+        raise LaneNotFound(
+            f"Mascara descontinua: cobre {cobertura:.2f} das linhas entre o topo da "
+            f"faixa e a base, abaixo do minimo {min_coverage:.2f}."
+        )
+
+    a_eixo, b_eixo = _ajuste_robusto(dados[:, 0], dados[:, 1])
+    coef_largura, usadas = _ajustar_largura(dados[:, [0, 2]])
+
+    y_top = y_inicio / altura
+    return GuideLane(
+        axis_top_x=(a_eixo * y_inicio + b_eixo) / largura,
+        axis_bottom_x=(a_eixo * (altura - 1) + b_eixo) / largura,
+        y_top=y_top,
+        width_coef=coef_largura,
+        coverage=cobertura,
+        rows_used=usadas,
+        frame_width=largura,
+        frame_height=altura,
+    )
+
+
 def detect_from_video(video_path: str | Path, samples: int | None = None) -> GuideLane:
-    """Atalho: mediana temporal do video e deteccao da faixa."""
+    """Mediana temporal do video e deteccao da faixa.
+
+    Tenta o modelo treinado primeiro e cai na heuristica de luminancia se ele
+    nao achar a faixa. A ordem importa: o modelo cobre casos que a heuristica
+    nao cobre, e a heuristica nao depende de download de pesos.
+    """
     cfg = load_config().get("lane", {})
     samples = samples if samples is not None else cfg.get("background_samples", 25)
-    return detect_guide_lane(background_median(video_path, samples))
+    fundo = background_median(video_path, samples)
+
+    if cfg.get("use_model", True):
+        try:
+            return detect_guide_lane_ml(fundo)
+        except (LaneNotFound, FileNotFoundError, OSError):
+            pass
+    return detect_guide_lane(fundo)
