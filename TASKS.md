@@ -100,8 +100,10 @@ Entregue:
 - `tools/draw_zone.py` — desenha a zona clicando sobre o primeiro frame
 - `tests/test_blockage.py` — 9 testes, todos passando
 
-Zona ativa `corredor_b21`: trapézio sobre o piso tátil do corredor B.2.1, alargado para a
-faixa livre de circulação, cortado em `y=0.55`.
+Zona ativa `corredor_b21`: trapézio **simétrico em torno do eixo do piso tátil**
+(`x=0.498`, medido no frame), com meia-largura de `0.034` no topo e `0.1865` na base,
+cortado em `y=0.583`. A abertura em perspectiva reproduz a marcação feita a mão pela
+equipe sobre um frame do corredor.
 
 Resultado nos clipes reais (`confirm_frames=8`, `frame_stride=2`, ≈0,53 s):
 
@@ -115,6 +117,9 @@ Resultado nos clipes reais (`confirm_frames=8`, `frame_stride=2`, ≈0,53 s):
 **Ajuste fino que sobrou**, se alguém tiver tempo: desenhar zona própria para o `borda.mp4`
 com `python tools/draw_zone.py data/samples/borda.mp4 --zona borda`, já que cada clipe pode
 ter enquadramento levemente diferente.
+
+Se for preciso reposicionar a faixa, o eixo do piso tátil está em `x=0.498` — mantenha as
+meias-larguras iguais dos dois lados, senão a folga fica desigual para quem se guia por ele.
 
 ---
 

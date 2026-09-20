@@ -59,24 +59,24 @@
       ]
     },
     "corredor_b21": {
-      "description": "Faixa livre de circulacao centrada no piso tatil direcional do corredor B.2.1. Alargada em relacao ao piso tatil porque quem se guia por ele precisa de folga lateral para o corpo e a bengala. Cortada em y=0.55: adiante disso a faixa tem poucos pixels e o detector nao enxerga objeto distante de forma confiavel.",
+      "description": "Faixa livre de circulacao do corredor B.2.1, SIMETRICA em torno do eixo do piso tatil direcional (x=0.498, medido no frame e conferido com regua ampliada). Meia-largura de 0.034 no topo e 0.1865 na base, reproduzindo a abertura em perspectiva marcada a mao pela equipe. Cortada em y=0.583: adiante disso a faixa tem poucos pixels e o detector nao enxerga objeto distante de forma confiavel.",
       "source_hint": "data/samples/obstruido.mp4",
       "polygon_norm": [
         [
-          0.34,
+          0.3115,
           1.0
         ],
         [
-          0.6,
+          0.6845,
           1.0
         ],
         [
-          0.515,
-          0.55
+          0.532,
+          0.583
         ],
         [
-          0.44,
-          0.55
+          0.464,
+          0.583
         ]
       ]
     }
