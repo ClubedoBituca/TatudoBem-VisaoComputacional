@@ -104,18 +104,8 @@ class ObstacleDetector:
             return "cpu"
         return "cuda:0"
 
-    def predict(
-        self,
-        frame: np.ndarray,
-        only_targets: bool = True,
-    ) -> list[Detection]:
-        """Roda o detector num frame BGR e devolve a lista de deteccoes.
-
-        `only_targets=True` mantem apenas as classes de `target_classes`.
-        As classes de `ignored_classes` sao sempre descartadas: 'person' esta
-        la porque pedestre em transito nao e barreira temporaria, e porque o
-        projeto nao identifica pessoas.
-        """
+    def _inferir(self, frame: np.ndarray) -> list[Detection]:
+        """Uma inferencia, todas as deteccoes acima do limiar, sem filtro de classe."""
         results: Any = self.model.predict(
             source=frame,
             imgsz=self.imgsz,
@@ -132,16 +122,11 @@ class ObstacleDetector:
                 continue
             for box in boxes:
                 class_id = int(box.cls[0])
-                class_name = self.class_names.get(class_id, str(class_id))
-                if class_name in self.ignored_classes:
-                    continue
-                if only_targets and class_name not in self.target_classes:
-                    continue
                 x1, y1, x2, y2 = (float(v) for v in box.xyxy[0])
                 detections.append(
                     Detection(
                         class_id=class_id,
-                        class_name=class_name,
+                        class_name=self.class_names.get(class_id, str(class_id)),
                         confidence=float(box.conf[0]),
                         x1=x1,
                         y1=y1,
@@ -150,3 +135,47 @@ class ObstacleDetector:
                     )
                 )
         return detections
+
+    def predict(
+        self,
+        frame: np.ndarray,
+        only_targets: bool = True,
+    ) -> list[Detection]:
+        """Roda o detector num frame BGR e devolve os candidatos a obstaculo.
+
+        `only_targets=True` mantem apenas as classes de `target_classes`.
+        As classes de `ignored_classes` sao sempre descartadas: 'person' esta
+        la porque pedestre em transito nao e barreira temporaria, e porque o
+        projeto nao identifica pessoas.
+        """
+        return [
+            d
+            for d in self._inferir(frame)
+            if d.class_name not in self.ignored_classes
+            and (not only_targets or d.class_name in self.target_classes)
+        ]
+
+    def predict_split(
+        self,
+        frame: np.ndarray,
+        only_targets: bool = True,
+    ) -> tuple[list[Detection], list[Detection]]:
+        """Devolve `(obstaculos, nao_obstrutivos)` numa UNICA inferencia.
+
+        Os nao obstrutivos sao as deteccoes de `ignored_classes` - hoje, so
+        pessoas. Eles nunca chegam a regra espacial, mas a interface precisa
+        deles: uma pessoa atravessando a faixa e apagada da tela parece um
+        detector cego. Mostrada e rotulada como "nao obstrui", vira prova de
+        que o sistema distingue pedestre em transito de barreira.
+
+        Continua valendo a regra do projeto: e deteccao de objeto generico,
+        sem qualquer identificacao de quem a pessoa e.
+        """
+        obstaculos: list[Detection] = []
+        nao_obstrutivos: list[Detection] = []
+        for d in self._inferir(frame):
+            if d.class_name in self.ignored_classes:
+                nao_obstrutivos.append(d)
+            elif not only_targets or d.class_name in self.target_classes:
+                obstaculos.append(d)
+        return obstaculos, nao_obstrutivos

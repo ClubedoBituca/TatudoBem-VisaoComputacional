@@ -10,7 +10,10 @@ Aqui ficam só as regras de como mexer no código.
    caixa, IoU com o polígono ou máscara de segmentação é mudança de produto, não refatoração.
 3. **Bloqueio exige N frames consecutivos.** Não reportar barreira a partir de um frame só.
 4. **Não persistir vídeo nem frames.** Só `outputs/events.csv`.
-5. **Nunca implementar reconhecimento facial ou identificação de pessoas.**
+5. **Nunca implementar reconhecimento facial ou identificação de pessoas.** Detectar
+   pessoa como objeto genérico e desenhá-la rotulada "não obstrui" é permitido e desejável
+   — identificar *quem* é, rastrear indivíduo entre frames ou extrair característica
+   pessoal, não.
 6. **Não adicionar dependência** fora de OpenCV, NumPy, Ultralytics, Streamlit, Pandas,
    Pillow e PyTorch. Nada de Grounding DINO, SAM, GPS, mapas, banco de dados, autenticação.
    Precisa de algo novo? Levante a questão antes de instalar.

@@ -28,8 +28,36 @@ Polygon = list[tuple[float, float]]
 VERDE = (60, 180, 75)
 VERMELHO = (40, 40, 220)
 LARANJA = (0, 150, 255)
+AZUL = (200, 130, 30)
 BRANCO = (255, 255, 255)
 PRETO = (0, 0, 0)
+
+
+# Rotulos em portugues para a tela. As classes do COCO vem em ingles, e rotulo
+# em ingles numa apresentacao brasileira parece coisa nao terminada. Sem acento:
+# as fontes Hershey do OpenCV sao ASCII. Classe fora do mapa cai no nome original.
+ROTULOS_PT = {
+    "person": "pessoa",
+    "chair": "cadeira",
+    "bench": "banco",
+    "couch": "sofa",
+    "dining table": "mesa",
+    "potted plant": "vaso de planta",
+    "backpack": "mochila",
+    "handbag": "bolsa",
+    "suitcase": "mala",
+    "bicycle": "bicicleta",
+    "motorcycle": "moto",
+    "car": "carro",
+    "truck": "caminhao",
+    "bus": "onibus",
+    "tv": "monitor",
+}
+
+
+def rotulo(class_name: str) -> str:
+    """Nome de exibicao da classe, em portugues quando houver traducao."""
+    return ROTULOS_PT.get(class_name, class_name)
 
 
 def _texto(frame: np.ndarray, txt: str, org: tuple[int, int], escala: float, cor, grossura: int = 1) -> None:
@@ -47,6 +75,7 @@ def draw_overlay(
     detections: list[Detection],
     polygon: Polygon,
     state: BlockageState | None = None,
+    passersby: list[Detection] | None = None,
 ) -> np.ndarray:
     """Desenha poligono da zona e caixas das deteccoes sobre uma copia do frame.
 
@@ -56,6 +85,11 @@ def draw_overlay(
 
     Objeto DENTRO da zona sai em vermelho; fora, em laranja. Assim da para
     conferir a decisao do sistema olhando um frame, sem ler log.
+
+    `passersby` sao as deteccoes nao obstrutivas (pessoas), vindas de
+    `ObstacleDetector.predict_split`. Saem em azul e rotuladas "nao obstrui",
+    mesmo quando pisam na faixa. Sem desenha-las, uma pessoa atravessando a
+    zona simplesmente sumiria da tela, e o sistema pareceria cego a ela.
     """
     tela = frame.copy()
     bloqueada = state is not None and state.status is RouteStatus.BLOQUEADA
@@ -79,15 +113,23 @@ def draw_overlay(
         cv2.circle(tela, (int(bx), int(by)), 6, cor, -1, cv2.LINE_AA)
         cv2.circle(tela, (int(bx), int(by)), 6, PRETO, 1, cv2.LINE_AA)
 
-        rotulo = f"{deteccao.class_name} {deteccao.confidence:.2f}"
-        _texto(tela, rotulo, (p1[0], max(14, p1[1] - 6)), 0.5, cor)
+        etiqueta = f"{rotulo(deteccao.class_name)} {deteccao.confidence:.2f}"
+        _texto(tela, etiqueta, (p1[0], max(14, p1[1] - 6)), 0.5, cor)
+
+    for pessoa in passersby or []:
+        p1 = (int(pessoa.x1), int(pessoa.y1))
+        p2 = (int(pessoa.x2), int(pessoa.y2))
+        cv2.rectangle(tela, p1, p2, AZUL, 1, cv2.LINE_AA)
+        bx, by = pessoa.bottom_center
+        cv2.circle(tela, (int(bx), int(by)), 5, AZUL, -1, cv2.LINE_AA)
+        _texto(tela, f"{rotulo(pessoa.class_name)} - nao obstrui", (p1[0], max(14, p1[1] - 6)), 0.45, AZUL)
 
     if state is not None:
-        tela = _faixa_status(tela, state)
+        tela = _faixa_status(tela, state, len(passersby or []))
     return tela
 
 
-def _faixa_status(frame: np.ndarray, state: BlockageState) -> np.ndarray:
+def _faixa_status(frame: np.ndarray, state: BlockageState, pessoas: int = 0) -> np.ndarray:
     """Barra superior com o veredito, legivel de longe numa projecao."""
     altura_barra = 46
     bloqueada = state.status is RouteStatus.BLOQUEADA
@@ -100,7 +142,11 @@ def _faixa_status(frame: np.ndarray, state: BlockageState) -> np.ndarray:
     _texto(frame, state.status.value, (16, 33), 0.95, BRANCO, 2)
 
     if bloqueada:
-        detalhe = ", ".join(sorted({d.class_name for d in state.intruders})) or "objeto"
+        detalhe = ", ".join(sorted({rotulo(d.class_name) for d in state.intruders})) or "objeto"
+    elif pessoas:
+        # Dizer que ha gente na cena e que isso nao conta e mais informativo do
+        # que o contador de frames - e o ponto que a demo precisa deixar claro.
+        detalhe = f"{pessoas} pessoa(s) em transito - nao conta como barreira"
     else:
         detalhe = f"{state.consecutive_frames} frame(s) sem invasao"
     # Medir o texto em vez de estimar pela contagem de caracteres: a fonte e

@@ -106,9 +106,9 @@ def main() -> int:
             # Uma unica inferencia por frame: alem do custo, o overlay marca os
             # invasores por identidade de objeto, e uma segunda chamada devolveria
             # instancias diferentes das que o rastreador avaliou.
-            deteccoes = detector.predict(frame)
+            deteccoes, pessoas = detector.predict_split(frame)
             estado = rastreador.update(deteccoes)
-            escritor.write(draw_overlay(frame, deteccoes, poligono, estado))
+            escritor.write(draw_overlay(frame, deteccoes, poligono, estado, passersby=pessoas))
             escritos += 1
 
             if estado.just_confirmed:

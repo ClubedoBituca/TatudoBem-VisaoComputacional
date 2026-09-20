@@ -87,8 +87,14 @@ O vídeo sai em `outputs/demos/` com a zona, as caixas e o veredito queimados na
 
 - **zona** verde quando a rota está livre, vermelha quando há barreira confirmada;
 - **caixa laranja** = objeto detectado fora da zona; **vermelha** = objeto invadindo;
+- **caixa azul** = pessoa, rotulada `não obstrui` — mesmo pisando na faixa;
 - **círculo** na base de cada caixa = o ponto inferior central, que é o que a regra testa;
-- **barra superior** com `ROTA LIVRE` ou `BARREIRA TEMPORARIA`.
+- **barra superior** com `ROTA LIVRE` ou `BARREIRA TEMPORARIA` e o motivo.
+
+Pessoas são detectadas e desenhadas, mas nunca contam como barreira: pedestre em trânsito
+não é obstáculo. Apagá-las da tela faria o sistema parecer cego a elas — mostrá-las
+rotuladas é o que prova que a distinção é deliberada. Continua valendo a regra do projeto:
+é detecção de objeto genérico, sem nenhuma identificação de quem a pessoa é.
 
 > **Privacidade.** O pipeline em operação **não grava vídeo** — só eventos em CSV. Esta
 > ferramenta é uma ação deliberada, fora do fluxo normal, e o arquivo gerado contém as

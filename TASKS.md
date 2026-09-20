@@ -70,6 +70,9 @@ integra nada**. Gravar vem primeiro.
       `ffmpeg -i entrada.mov -c:v libx264 -crf 23 saida.mp4`
 
 ### Bloco 2 (1:30 – 2:15)
+- [ ] Investigar a mochila do `obstruido.mp4`: detectada como `mala`/`mochila` em parte
+      dos frames e ausente em outros. O evento disparou pela cadeira, não por ela. Baixar
+      `conf_threshold` ou documentar como limitação.
 - [ ] Rodar o detector nos clipes reais e ajustar `detection.conf_threshold` e
       `detection.target_classes` em `config/zones.json`. Os valores atuais são chute.
 - [ ] Ver o que o COCO **não** reconhece na filmagem (cone, tapume, entulho) e anotar —
