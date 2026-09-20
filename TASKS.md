@@ -124,8 +124,8 @@ fechadas em `blockage.py` — programe contra elas e use um estado falso até a 
 ### Bloco 1 (0:15 – 1:15)
 - [ ] `events.py`: `ensure_csv()`, `append_event()`, `load_events()` — o esquema do CSV já
       está documentado no módulo, não invente colunas.
-- [ ] `ui.draw_overlay()` — polígono da zona, caixas das detecções e **o ponto inferior
-      central de cada caixa**. Esse ponto é o que mais ajuda a frente 2 a depurar; não pule.
+- [x] ~~`ui.draw_overlay()`~~ — **pronto e validado**. Desenha zona, caixas (laranja fora /
+      vermelho invadindo), ponto inferior central e barra de status. Só chamar.
 - [ ] `ui.status_banner()` — verde `ROTA LIVRE`, vermelho `BARREIRA TEMPORÁRIA`, grande.
 - [ ] `app.py`: seletor de vídeo em `data/samples/` e laço de processamento atualizando um
       `st.empty()` a cada frame.

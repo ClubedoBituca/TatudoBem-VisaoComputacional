@@ -73,6 +73,28 @@ ffmpeg -y -loop 1 -i data/test/bus.jpg -t 5 -r 30 \
 É uma imagem em loop — serve para exercitar o pipeline com detecções reais em todo frame,
 não para avaliar qualidade. Os vídeos de verdade vão em `data/samples/`.
 
+## Saída visual
+
+A interface mostra o frame anotado ao vivo. Para gerar um arquivo de vídeo anotado — útil
+para a apresentação, e como plano B se a demo ao vivo falhar:
+
+```bash
+python tools/render_video.py data/samples/obstruido.mp4
+python tools/render_video.py data/samples/obstruido.mp4 --inicio 8 --fim 25
+```
+
+O vídeo sai em `outputs/demos/` com a zona, as caixas e o veredito queimados na imagem:
+
+- **zona** verde quando a rota está livre, vermelha quando há barreira confirmada;
+- **caixa laranja** = objeto detectado fora da zona; **vermelha** = objeto invadindo;
+- **círculo** na base de cada caixa = o ponto inferior central, que é o que a regra testa;
+- **barra superior** com `ROTA LIVRE` ou `BARREIRA TEMPORARIA`.
+
+> **Privacidade.** O pipeline em operação **não grava vídeo** — só eventos em CSV. Esta
+> ferramenta é uma ação deliberada, fora do fluxo normal, e o arquivo gerado contém as
+> pessoas que aparecem na gravação original, ainda que o sistema não as identifique.
+> Confira quem aparece antes de pôr num slide ou mandar em grupo.
+
 ## Como gravar os vídeos
 
 O polígono da zona é **fixo em coordenadas de imagem**. Isso impõe um requisito de gravação:
