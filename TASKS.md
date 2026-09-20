@@ -83,31 +83,35 @@ acha os objetos de interesse de forma estável.
 
 ---
 
-## Frente 2 — Regra espacial *(caminho crítico)*
+## Frente 2 — Regra espacial ✅ CONCLUÍDA
 
-**Dono de:** `src/blockage.py`, `tools/draw_zone.py` (criar)
-**Não depende de vídeo real** para começar — use `data/test/pipeline_check.mp4` e polígonos
-sintéticos. Comece já.
+**Dono de:** `src/blockage.py`, `tools/draw_zone.py`
 
-### Bloco 1 (0:15 – 1:15)
-- [ ] `denormalize_polygon()` — normalizado (0–1) → pixels do frame de trabalho.
-- [ ] `point_in_polygon()` — `cv2.pointPolygonTest(np.array(poly, np.int32), pt, False) >= 0`.
-- [ ] `detections_in_zone()` — filtra pelo `Detection.bottom_center`.
-- [ ] `BlockageTracker.__init__` / `update()` / `reset()` — contadores consecutivos com
-      histerese: `confirm_frames` para confirmar, `release_frames` para liberar; setar
-      `just_confirmed` e `just_released`, que são o gatilho de abrir e fechar evento.
-- [ ] **Avisar a frente 3 assim que o `BlockageTracker` funcionar** — a interface depende dele.
+Implementada e validada nos 4 clipes reais. Quem ia pegar esta frente **realoca para a
+frente 4** (ground truth e métricas) ou reforça a 3.
 
-### Bloco 2 (1:30 – 2:15)
-- [ ] `tools/draw_zone.py` — abrir o primeiro frame numa janela OpenCV (no WSL o WSLg dá
-      `DISPLAY=:0`), coletar cliques com `cv2.setMouseCallback`, `ENTER` salva o polígono
-      normalizado em `config/zones.json`, `ESC` cancela.
-- [ ] Desenhar a zona real de cada clipe de `data/samples/`, uma entrada por vídeo em `zones`.
-- [ ] Calibrar `confirm_frames` com o fps real: 8 frames a 30 fps ≈ 0,27 s — provavelmente
-      curto demais. Teste 15–30 (0,5–1 s).
+Entregue:
+- `denormalize_polygon()`, `point_in_polygon()`, `detections_in_zone()`
+- `BlockageTracker` com histerese e as flags `just_confirmed` / `just_released`
+- `tracker.blocked_frames` — frames desde a confirmação, para `duration_s` do evento
+- `tools/draw_zone.py` — desenha a zona clicando sobre o primeiro frame
+- `tests/test_blockage.py` — 9 testes, todos passando
 
-**Pronto quando:** objeto parado na faixa vira `BARREIRA TEMPORÁRIA` de forma estável, e
-alguém passando pela borda não dispara alerta.
+Zona ativa `corredor_b21`: trapézio sobre o piso tátil do corredor B.2.1, alargado para a
+faixa livre de circulação, cortado em `y=0.55`.
+
+Resultado nos clipes reais (`confirm_frames=8`, `frame_stride=2`, ≈0,53 s):
+
+| vídeo | esperado | eventos | % bloqueado |
+|---|---|---|---|
+| `livre.mp4` | LIVRE | 0 | 0% |
+| `obstruido.mp4` | BARREIRA | 1 | 99% |
+| `borda.mp4` | LIVRE | 0 | 0% |
+| `pessoas.mp4` | LIVRE | 0 | 0% |
+
+**Ajuste fino que sobrou**, se alguém tiver tempo: desenhar zona própria para o `borda.mp4`
+com `python tools/draw_zone.py data/samples/borda.mp4 --zona borda`, já que cada clipe pode
+ter enquadramento levemente diferente.
 
 ---
 
