@@ -17,11 +17,13 @@ mostra **BARREIRA TEMPORÁRIA**. Caso contrário, **ROTA LIVRE**.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+
+pip install -r requirements.txt        # com GPU NVIDIA — ~3 GB
+pip install -r requirements-cpu.txt    # sem GPU, ou só para desenvolver — ~200 MB
 ```
 
-O `requirements.txt` traz o PyTorch com CUDA. Para instalar a variante **somente CPU**
-(muito menor e mais rápida de baixar), veja o comentário no topo do arquivo.
+As duas variantes travam as mesmas versões de tudo, mudando só o PyTorch. Só quem vai
+rodar a demo precisa da versão com CUDA.
 
 ## Uso
 

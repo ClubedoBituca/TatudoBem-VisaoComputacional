@@ -38,7 +38,8 @@ Precisa mexer em arquivo de outra frente? Fale no grupo antes — não edite por
 git clone https://github.com/ClubedoBituca/TatudoBem-VisaoComputacional.git
 cd TatudoBem-VisaoComputacional
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt          # PyTorch CUDA ~3 GB; sem GPU, ver cabeçalho do arquivo
+pip install -r requirements-cpu.txt      # ~200 MB — use este, a menos que você rode a demo
+# pip install -r requirements.txt        # ~3 GB, só para a máquina da demo (GPU NVIDIA)
 # regenerar o material de verificação: ver seção no README
 python tests/smoke_env.py && python tests/smoke_capture.py && python tests/smoke_inference.py
 ```
