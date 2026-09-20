@@ -175,6 +175,15 @@ def _perfil_largura(mascara: np.ndarray, xb: float, xv: float, y_top: float) -> 
 
 def _ajustar_largura(obs: np.ndarray) -> tuple[tuple[float, float], int]:
     y, larg = obs[:, 0], obs[:, 1]
+
+    # Pre-filtro pela mediana. Faixas decorativas escuras atravessam o corredor
+    # inteiro; nas linhas onde elas passam, a expansao lateral corre pelo piso
+    # todo e a largura explode. Sao poucas linhas, entao a mediana continua
+    # valendo - basta descartar o que for multiplo dela.
+    mediana = np.median(larg)
+    plausivel = larg < 3.0 * max(2.0, mediana)
+    if plausivel.sum() >= 20:
+        y, larg = y[plausivel], larg[plausivel]
     for _ in range(8):
         coef = np.polyfit(y, larg, 1)
         residuo = larg - np.polyval(coef, y)
@@ -185,6 +194,23 @@ def _ajustar_largura(obs: np.ndarray) -> tuple[tuple[float, float], int]:
             break
         y, larg = y[manter], larg[manter]
     a, b = np.polyfit(y, larg, 1)
+
+    # Restricao de perspectiva: a faixa tem largura constante no mundo real,
+    # logo na imagem ela converge a zero no ponto de fuga. Um ajuste livre pode
+    # sair quase horizontal quando a mascara esta ruidosa - e ai o poligono vira
+    # um retangulo, que nao representa corredor nenhum. Quando a linha ajustada
+    # so zera fora de um intervalo plausivel, fixamos o ponto de fuga e
+    # reajustamos apenas a inclinacao.
+    altura_ref = float(y.max())
+    y_fuga = -b / a if a > 0 else float("inf")
+    if not (0.30 * altura_ref < y_fuga < 0.70 * altura_ref):
+        y_fuga = 0.52 * altura_ref
+        denom = y - y_fuga
+        util = denom > 1.0
+        if util.sum() >= 15:
+            a = float(np.median(larg[util] / denom[util]))
+            b = -a * y_fuga
+
     return (float(a), float(b)), len(y)
 
 

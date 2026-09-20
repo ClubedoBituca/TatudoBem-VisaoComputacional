@@ -11,7 +11,7 @@
     "free_width_ratio": 4.0,
     "darkness_threshold": 0.13,
     "background_samples": 25,
-    "min_coverage": 0.9
+    "min_coverage": 0.8
   },
   "detection": {
     "model_path": "models/yolo11n.pt",

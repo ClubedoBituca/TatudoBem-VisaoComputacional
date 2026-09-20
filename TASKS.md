@@ -126,6 +126,21 @@ meias-larguras iguais dos dois lados, senão a folga fica desigual para quem se 
 
 ---
 
+## Pendência aberta — obstrução sem classe conhecida
+
+`src/surface.py` existe mas **não está ligado ao pipeline**, e não deve entrar na demo como
+está: em `livre.mp4`, com o caminho desimpedido, acusa 3 obstruções falsas.
+
+O que funciona: em `caixas.mp4` ele pega a caixa de papelão que invade o caminho pela
+esquerda — objeto que o YOLO não enxerga de jeito nenhum. A ideia está certa, a
+implementação não está robusta.
+
+Próximo passo sugerido: trocar o modelo paramétrico de piso por comparação com a mediana
+temporal do próprio clipe. Medir o que mudou em relação ao corredor é mais fácil do que
+definir o que "parece piso".
+
+---
+
 ## Frente 3 — Interface
 
 **Dono de:** `app.py`, `src/ui.py`, `src/events.py`
