@@ -141,7 +141,7 @@ definir o que "parece piso".
 
 ---
 
-## Frente 3 — Interface
+## Frente 3 — Interface ✅ CONCLUÍDA
 
 **Dono de:** `app.py`, `src/ui.py`, `src/events.py`
 **Não espere a frente 2.** As assinaturas de `BlockageState` e `RouteStatus` já estão
@@ -162,10 +162,12 @@ fechadas em `blockage.py` — programe contra elas e use um estado falso até a 
 - [ ] `ui.sidebar_controls()` — confiança, `confirm_frames` e zona ativa ajustáveis ao vivo.
       Vale ouro se a demo começar a falhar na frente do júri.
 
-**Cuidado:** o upload do Streamlit fica em memória. **Não gravar o vídeo em disco** — o
-`PROJECT_CONTEXT.md` proíbe persistir vídeo ou frame.
+Validado com `streamlit.testing.v1.AppTest`, que roda o script e captura exceção:
+`obstruido.mp4` → 1 evento, banner `BARREIRA TEMPORÁRIA (cadeira, mala)`;
+`livre.mp4` e `pessoas.mp4` → 0 eventos, banner `ROTA LIVRE`. Processamento a 25–30 fps.
 
-**Pronto quando:** dá para escolher um vídeo, ver o status mudando e a tabela de eventos crescendo.
+**Sobrou:** `sidebar_controls` não tem botão de parar no meio do processamento — o vídeo
+roda até o fim. Em clipe de 50 s a 30 fps isso é ~2 min de espera.
 
 ---
 

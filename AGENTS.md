@@ -42,13 +42,12 @@ Quatro pessoas trabalham em paralelo. Antes de editar, confira de quem é o arqu
 ## Estado atual do código
 
 `src/capture.py`, `src/detector.py`, `src/config.py` e `src/blockage.py` estão
-**funcionais**, mais `src/lane.py` (detecção da faixa guia). `src/ui.py` tem o
-`draw_overlay` funcional (usado pelo Streamlit e por
-`tools/render_video.py`). `src/events.py` e o restante de `src/ui.py` são **stubs**: as
-assinaturas e os
-contratos estão fechados, os corpos levantam `NotImplementedError` com um marcador
-`TODO(frente-N)`. Implemente dentro da assinatura existente; mudar assinatura quebra quem
-já programou contra ela.
+**funcionais**, mais `src/lane.py`, `src/ui.py`, `src/events.py` e `app.py`. O MVP está
+fechado de ponta a ponta.
+
+A exceção é `src/surface.py` (obstrução sem classe conhecida): **experimental, desligado do
+pipeline**, com falsos positivos medidos em caminho livre. Ver a docstring do módulo antes
+de mexer.
 
 ## Convenções
 

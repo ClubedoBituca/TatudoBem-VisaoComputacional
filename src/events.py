@@ -2,8 +2,8 @@
 
 FRENTE 3 (Interface) e dona deste arquivo, em acordo com a frente 2.
 
-Estado: STUB, com o esquema do CSV ja fechado - a frente 4 depende dele para
-montar o ground truth.
+Estado: FUNCIONAL. O esquema do CSV nao mudou em relacao ao que foi publicado
+no stub - a frente 4 pode contar com ele para o ground truth.
 
 Esquema de outputs/events.csv (uma linha por bloqueio confirmado e encerrado):
 
@@ -59,24 +59,48 @@ class BlockageEvent:
 
 
 def ensure_csv(path: Path | None = None) -> Path:
-    """Cria o CSV com cabecalho se ele ainda nao existir.
+    """Cria o CSV com cabecalho se ele ainda nao existir."""
+    destino = path or EVENTS_PATH
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    if not destino.exists() or destino.stat().st_size == 0:
+        with destino.open("w", newline="", encoding="utf-8") as arquivo:
+            csv.DictWriter(arquivo, fieldnames=CSV_FIELDS).writeheader()
+    return destino
 
-    TODO(frente-3): implementar.
+
+def next_event_id(path: Path | None = None) -> int:
+    """Proximo id sequencial, continuando o que ja existe no arquivo.
+
+    Le do arquivo em vez de contar em memoria: assim reprocessar um video na
+    interface nao reinicia a numeracao e sobrescreve o historico.
     """
-    raise NotImplementedError("frente-3: criar CSV com cabecalho")
+    destino = ensure_csv(path)
+    with destino.open(newline="", encoding="utf-8") as arquivo:
+        ids = [int(linha["event_id"]) for linha in csv.DictReader(arquivo) if linha.get("event_id")]
+    return max(ids, default=0) + 1
 
 
 def append_event(event: BlockageEvent, path: Path | None = None) -> None:
-    """Acrescenta um evento ao CSV.
-
-    TODO(frente-3): implementar.
-    """
-    raise NotImplementedError("frente-3: append de evento no CSV")
+    """Acrescenta um evento ao CSV."""
+    destino = ensure_csv(path)
+    with destino.open("a", newline="", encoding="utf-8") as arquivo:
+        csv.DictWriter(arquivo, fieldnames=CSV_FIELDS).writerow(event.as_row())
 
 
 def load_events(path: Path | None = None):
-    """Le o CSV como DataFrame do pandas, para exibir na interface.
+    """Le o CSV como DataFrame do pandas, para exibir na interface."""
+    import pandas as pd
 
-    TODO(frente-3): implementar.
-    """
-    raise NotImplementedError("frente-3: leitura do CSV com pandas")
+    destino = ensure_csv(path)
+    dados = pd.read_csv(destino)
+    if not dados.empty:
+        dados = dados.sort_values("event_id", ascending=False)
+    return dados
+
+
+def clear_events(path: Path | None = None) -> None:
+    """Apaga os eventos, mantendo o cabecalho. Util antes de uma demo limpa."""
+    destino = path or EVENTS_PATH
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    with destino.open("w", newline="", encoding="utf-8") as arquivo:
+        csv.DictWriter(arquivo, fieldnames=CSV_FIELDS).writeheader()

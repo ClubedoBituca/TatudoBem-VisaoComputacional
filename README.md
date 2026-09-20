@@ -8,9 +8,9 @@ YOLO pré-treinado encontra objetos no frame; se o **ponto inferior central** da
 objeto cai dentro do polígono por alguns frames seguidos, o sistema registra um evento e
 mostra **BARREIRA TEMPORÁRIA**. Caso contrário, **ROTA LIVRE**.
 
-> **Estado atual:** ambiente e esqueleto prontos, pipeline `captura → YOLO → inferência`
-> verificado. A regra espacial, a interface e os testes estão distribuídos em quatro frentes
-> paralelas — ver [`TASKS.md`](TASKS.md).
+> **Estado atual:** MVP fechado de ponta a ponta. `streamlit run app.py` abre um vídeo,
+> localiza o piso tátil, marca a faixa acessível, detecta objetos, decide o status e grava
+> os eventos em CSV.
 
 ## Setup
 
@@ -31,6 +31,12 @@ rodar a demo precisa da versão com CUDA.
 source .venv/bin/activate     # ativar o ambiente
 streamlit run app.py          # abrir a interface
 ```
+
+Na interface: escolha o vídeo na barra lateral e clique em **Processar vídeo**. Antes de
+processar, o primeiro frame já aparece com a faixa acessível marcada, para conferir o
+enquadramento. Ajustáveis ao vivo: largura da faixa livre, confiança mínima, frames para
+confirmar e o salto de frames. Os eventos vão para `outputs/events.csv` e aparecem na
+tabela à direita.
 
 Verificação rápida da instalação, na ordem:
 

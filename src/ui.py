@@ -2,8 +2,8 @@
 
 FRENTE 3 (Interface) e dona deste arquivo.
 
-Estado: `draw_overlay` FUNCIONAL (usado tanto pelo Streamlit quanto por
-tools/render_video.py). O restante segue stub da frente 3.
+Estado: FUNCIONAL. `draw_overlay` e usado tanto pelo Streamlit quanto por
+tools/render_video.py, entao nao existem duas versoes do desenho.
 
 Mantem app.py enxuto: o app orquestra, este modulo desenha.
 
@@ -167,22 +167,101 @@ def _faixa_status(frame: np.ndarray, state: BlockageState, pessoas: int = 0) -> 
 def status_banner(state: BlockageState) -> None:
     """Renderiza o banner de status no Streamlit.
 
-    TODO(frente-3): implementar.
+    Grande e colorido de proposito: numa projecao, quem esta no fundo da sala
+    tem que ler o veredito sem enxergar o video.
     """
-    raise NotImplementedError("frente-3: banner de status")
+    import streamlit as st
+
+    if state.status is RouteStatus.BLOQUEADA:
+        classes = ", ".join(sorted({rotulo(d.class_name) for d in state.intruders})) or "objeto"
+        st.error(f"### BARREIRA TEMPORÁRIA\n\nObstruindo a passagem: **{classes}**", icon="🚫")
+    else:
+        st.success("### ROTA LIVRE\n\nNenhuma obstrução confirmada na faixa.", icon="✅")
 
 
-def events_table() -> None:
-    """Renderiza a tabela de eventos a partir de outputs/events.csv.
+def events_table(path=None) -> None:
+    """Renderiza a tabela de eventos a partir de outputs/events.csv."""
+    import streamlit as st
 
-    TODO(frente-3): implementar.
+    from .events import load_events
+
+    dados = load_events(path)
+    if dados.empty:
+        st.caption("Nenhum evento registrado ainda.")
+        return
+
+    st.dataframe(
+        dados,
+        hide_index=True,
+        width="stretch",
+        column_config={
+            "event_id": st.column_config.NumberColumn("#", width="small"),
+            "timestamp": st.column_config.TextColumn("Início"),
+            "source": st.column_config.TextColumn("Vídeo"),
+            "class_name": st.column_config.TextColumn("Objeto"),
+            "confidence": st.column_config.NumberColumn("Confiança", format="%.2f"),
+            "duration_s": st.column_config.NumberColumn("Duração (s)", format="%.1f"),
+            "frames": st.column_config.NumberColumn("Frames", width="small"),
+            "zone": st.column_config.TextColumn("Zona"),
+        },
+    )
+
+
+def sidebar_controls(videos: list[str]) -> dict[str, object]:
+    """Controles de ajuste na barra lateral.
+
+    Os limiares ficam ajustaveis ao vivo porque calibrar na frente do juri e
+    melhor do que travar num valor que nao serve para a cena do dia.
     """
-    raise NotImplementedError("frente-3: tabela de eventos")
+    import streamlit as st
 
+    from .config import load_config
 
-def sidebar_controls() -> dict[str, object]:
-    """Controles de ajuste (confianca, frames de confirmacao, zona ativa).
+    cfg = load_config()
 
-    TODO(frente-3): implementar.
-    """
-    raise NotImplementedError("frente-3: controles da barra lateral")
+    with st.sidebar:
+        st.subheader("Fonte")
+        # Abre no clipe que demonstra o sistema alarmando. O padrao alfabetico
+        # caia num video onde a deteccao da faixa falha - pessima primeira tela.
+        preferidos = ["obstruido.mp4", "caixas.mp4", "livre.mp4"]
+        inicial = next((videos.index(v) for v in preferidos if v in videos), 0)
+        video = st.selectbox("Vídeo", videos, index=inicial, help="Arquivos em data/samples/")
+
+        st.subheader("Faixa acessível")
+        automatica = st.toggle(
+            "Detectar o piso tátil", value=True,
+            help="Desligado, usa o polígono fixo de config/zones.json.",
+        )
+        ratio = st.slider(
+            "Largura da faixa livre", 2.0, 6.0,
+            float(cfg.get("lane", {}).get("free_width_ratio", 4.0)), 0.5,
+            help="Em múltiplos da largura do piso tátil.",
+            disabled=not automatica,
+        )
+
+        st.subheader("Detecção")
+        confianca = st.slider(
+            "Confiança mínima", 0.10, 0.90,
+            float(cfg["detection"]["conf_threshold"]), 0.05,
+        )
+        confirmar = st.slider(
+            "Frames para confirmar", 1, 40, int(cfg["blockage"]["confirm_frames"]),
+            help="A 30 fps com salto 2, 8 frames ≈ 0,5 s.",
+        )
+        salto = st.slider(
+            "Processar 1 frame a cada", 1, 6, int(cfg["capture"]["frame_stride"]),
+            help="Maior = mais rápido, menos preciso no tempo.",
+        )
+
+        st.subheader("Eventos")
+        limpar = st.button("Limpar histórico", width="stretch")
+
+    return {
+        "video": video,
+        "auto_lane": automatica,
+        "ratio": ratio,
+        "conf": confianca,
+        "confirm_frames": confirmar,
+        "stride": salto,
+        "limpar": limpar,
+    }
