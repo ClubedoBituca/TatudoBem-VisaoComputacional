@@ -1,0 +1,135 @@
+# Caminho Livre — UNIFEI
+
+MVP de visão computacional que identifica **obstáculos temporários** bloqueando áreas de
+circulação acessível no campus da UNIFEI.
+
+Uma câmera estática observa um trecho de passagem delimitado por um polígono. Um detector
+YOLO pré-treinado encontra objetos no frame; se o **ponto inferior central** da caixa de um
+objeto cai dentro do polígono por alguns frames seguidos, o sistema registra um evento e
+mostra **BARREIRA TEMPORÁRIA**. Caso contrário, **ROTA LIVRE**.
+
+> **Estado atual:** ambiente e esqueleto prontos, pipeline `captura → YOLO → inferência`
+> verificado. A regra espacial, a interface e os testes estão distribuídos em quatro frentes
+> paralelas — ver [`TASKS.md`](TASKS.md).
+
+## Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+O `requirements.txt` traz o PyTorch com CUDA. Para instalar a variante **somente CPU**
+(muito menor e mais rápida de baixar), veja o comentário no topo do arquivo.
+
+## Uso
+
+```bash
+source .venv/bin/activate     # ativar o ambiente
+streamlit run app.py          # abrir a interface
+```
+
+Verificação rápida da instalação, na ordem:
+
+```bash
+python tests/smoke_env.py                      # versões, GPU, device escolhido
+python tests/smoke_capture.py                  # leitura de vídeo e webcam
+python tests/smoke_inference.py                # carga do modelo e inferência
+python tests/smoke_inference.py data/test/pipeline_check.mp4   # inferência em vídeo
+```
+
+### Material de verificação
+
+Vídeos e imagens não são versionados. Para recriar o clipe usado pelos smoke tests:
+
+```bash
+curl -sL -o data/test/bus.jpg \
+  https://raw.githubusercontent.com/ultralytics/ultralytics/main/ultralytics/assets/bus.jpg
+ffmpeg -y -loop 1 -i data/test/bus.jpg -t 5 -r 30 \
+  -vf "scale=-2:720,pad=1280:720:(ow-iw)/2:0:color=gray" \
+  -c:v libx264 -pix_fmt yuv420p -crf 23 data/test/pipeline_check.mp4
+```
+
+É uma imagem em loop — serve para exercitar o pipeline com detecções reais em todo frame,
+não para avaliar qualidade. Os vídeos de verdade vão em `data/samples/`.
+
+## Como gravar os vídeos
+
+O polígono da zona é **fixo em coordenadas de imagem**. Isso impõe um requisito de gravação:
+
+- **Celular parado.** Apoiado em tripé, muro ou banco. Não caminhar durante a gravação — se
+  a câmera se move, a faixa de circulação sai de baixo do polígono e a regra perde o sentido.
+- **Orientação horizontal** (paisagem).
+- Enquadrar o trecho de passagem de ponta a ponta.
+- Salvar em `data/samples/`. Vídeos não são versionados nem persistidos pelo sistema.
+
+Se o vídeo for HEVC/H.265 (padrão do iPhone) e o OpenCV não abrir, converta:
+
+```bash
+ffmpeg -i entrada.mov -c:v libx264 -crf 23 saida.mp4
+```
+
+## Configuração
+
+Tudo que se ajusta está em [`config/zones.json`](config/zones.json):
+
+| Chave | O que faz |
+|---|---|
+| `capture.work_width` | largura do frame de trabalho; menor = mais rápido |
+| `detection.conf_threshold` | confiança mínima para aceitar uma detecção |
+| `detection.target_classes` | classes COCO tratadas como possível obstáculo |
+| `detection.ignored_classes` | classes sempre descartadas (`person`, por decisão de projeto) |
+| `blockage.confirm_frames` | frames consecutivos para confirmar um bloqueio |
+| `blockage.release_frames` | frames consecutivos sem invasão para liberar a rota |
+| `zones.<nome>.polygon_norm` | vértices do polígono em coordenadas **normalizadas** (0–1) |
+
+O polígono atual é um trapézio **placeholder**. Substitua pelos pontos do trecho real —
+a ferramenta de desenho do polígono é tarefa da frente 2 (`TASKS.md`).
+
+## Estrutura
+
+```
+app.py                  interface Streamlit (esqueleto)
+.streamlit/config.toml  Streamlit em localhost, sem envio de estatísticas
+config/zones.json       zona, classes e limiares
+models/                 pesos YOLO pré-treinados (baixados sob demanda)
+src/
+  config.py             leitura de config/zones.json          [funcional]
+  capture.py            leitura de vídeo/webcam               [funcional]
+  detector.py           wrapper do YOLO                       [funcional]
+  blockage.py           regra espacial e persistência         [stub — frente 2]
+  events.py             escrita de outputs/events.csv         [stub — frente 3]
+  ui.py                 componentes Streamlit                 [stub — frente 3]
+data/samples/           vídeos reais da UNIFEI (não versionados)
+data/test/              material de verificação do pipeline
+outputs/events.csv      um registro por bloqueio encerrado
+tests/                  smoke tests dos três portões
+```
+
+## Privacidade
+
+- **Nenhum vídeo ou frame é gravado em disco.** Só as linhas de `outputs/events.csv`.
+- **Não há reconhecimento facial nem identificação de pessoas**, em nenhuma forma.
+  A classe `person` é ignorada: pedestre em trânsito não é barreira temporária.
+- **Telemetria desligada** nas duas bibliotecas que a trazem ativa por padrão: Ultralytics
+  (configuração isolada em `.ultralytics/`, sem tocar em `~/.config`) e Streamlit
+  (`gatherUsageStats = false`). Nada do projeto sai da máquina.
+- O Streamlit escuta apenas em `localhost`, não em todas as interfaces de rede.
+
+## Limitações conhecidas
+
+- **Sem webcam no WSL2.** O WSL2 não expõe `/dev/video*`. A entrada é arquivo de vídeo; o
+  caminho de webcam existe em `capture.py` mas não foi exercitado neste ambiente. Para
+  câmera ao vivo: rodar em Linux/Windows nativo, ou anexar o dispositivo com `usbipd-win`.
+- **Câmera precisa estar parada** — ver "Como gravar os vídeos".
+- **Detector pré-treinado em COCO.** Ele conhece cadeira, banco, vaso, bicicleta, carro e
+  afins; **não** conhece cone de obra, tapume, placa de sinalização ou entulho — obstáculos
+  comuns em campus. Reconhecer esses exigiria treinamento próprio, que está fora do MVP.
+- **Sem GPS, mapa do campus, banco de dados ou autenticação.** Por decisão de escopo.
+
+## Documentação do projeto
+
+- [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) — o que o sistema é e as decisões de produto.
+- [`AGENTS.md`](AGENTS.md) — regras de código e invariantes, para pessoas e IAs de IDE.
+- [`TASKS.md`](TASKS.md) — as quatro frentes de trabalho paralelas.

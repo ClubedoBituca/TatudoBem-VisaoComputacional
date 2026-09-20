@@ -1,0 +1,27 @@
+# Ambiente
+.venv/
+__pycache__/
+*.py[cod]
+
+# Pesos do modelo (baixados sob demanda, ver README)
+models/*.pt
+*.pt
+
+# Configuracao local do Ultralytics (telemetria desligada)
+.ultralytics/
+
+# Midia: o projeto nao versiona nem persiste video
+data/samples/*
+data/test/*
+!data/**/.gitkeep
+!data/**/*.csv
+outputs/demos/*
+!outputs/demos/.gitkeep
+
+# Saida de execucao
+outputs/events.csv
+
+# Editores
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "active_zone": "unifei_default",
+
+  "capture": {
+    "work_width": 960,
+    "frame_stride": 1
+  },
+
+  "detection": {
+    "model_path": "models/yolo11n.pt",
+    "imgsz": 640,
+    "conf_threshold": 0.35,
+    "iou_threshold": 0.45,
+    "target_classes": [
+      "chair", "bench", "potted plant", "suitcase", "backpack", "handbag",
+      "bicycle", "motorcycle", "car", "truck", "bus", "dining table", "couch", "tv"
+    ],
+    "ignored_classes": ["person"]
+  },
+
+  "blockage": {
+    "reference_point": "bottom_center",
+    "confirm_frames": 8,
+    "release_frames": 8
+  },
+
+  "zones": {
+    "unifei_default": {
+      "description": "Poligono placeholder em formato de trapezio, cobrindo a faixa de passagem vista por uma camera estatica. Substituir pelos pontos reais do trecho gravado.",
+      "source_hint": "data/samples/<video-da-unifei>.mp4",
+      "polygon_norm": [
+        [0.22, 1.00],
+        [0.41, 0.52],
+        [0.60, 0.52],
+        [0.88, 1.00]
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# Configuracao local do Streamlit para o Caminho Livre — UNIFEI.
+
+[browser]
+# O Streamlit envia estatisticas de uso para servidor externo por padrao.
+# Desligado pelo mesmo motivo da telemetria do Ultralytics: nada do projeto
+# sai desta maquina.
+gatherUsageStats = false
+
+[server]
+# Escuta apenas em localhost. Sem isso o Streamlit publica a aplicacao em
+# todas as interfaces de rede da maquina. Para demonstrar em outro
+# dispositivo da mesma rede, suba com: streamlit run app.py --server.address 0.0.0.0
+address = "localhost"
+headless = true
+
+# O upload do video acontece em memoria; 1 GB cobre um clipe longo de celular.
+maxUploadSize = 1024
+
+[theme]
+base = "light"
