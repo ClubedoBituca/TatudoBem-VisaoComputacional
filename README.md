@@ -73,6 +73,41 @@ ffmpeg -y -loop 1 -i data/test/bus.jpg -t 5 -r 30 \
 É uma imagem em loop — serve para exercitar o pipeline com detecções reais em todo frame,
 não para avaliar qualidade. Os vídeos de verdade vão em `data/samples/`.
 
+## Como a faixa acessível é encontrada
+
+O sistema **não usa um polígono desenhado à mão**. Ele localiza o piso tátil direcional no
+próprio vídeo e deriva dele a faixa livre de circulação:
+
+```bash
+python tools/detect_lane.py data/samples/livre.mp4
+python tools/detect_lane.py data/samples/livre.mp4 --ratio 5
+```
+
+Quatro passos, só com OpenCV e NumPy:
+
+1. **Fundo** — câmera estática mais mediana temporal de 25 frames dá o corredor sem quem
+   estava passando. Objeto parado permanece, e tudo bem: ele é obstáculo, não ruído.
+2. **Máscara** — por linha da imagem, o piso é a referência clara e marcamos o que escurece
+   em relação a ela. Isso pega o piso tátil **e** os objetos.
+3. **Eixo** — o piso tátil é a única estrutura que atravessa toda a profundidade do
+   corredor; um objeto ocupa só um trecho. Procuramos a reta de maior cobertura na máscara.
+   Como um feixe inteiro de retas dentro da faixa empata, o eixo é a **mediana** do feixe.
+4. **Largura** — cresce para os lados a partir do eixo e ajusta `largura = a·y + b`. A
+   rejeição de outliers é assimétrica, porque encostar num objeto só infla a largura.
+
+A faixa livre é o piso tátil multiplicado por `lane.free_width_ratio` (padrão 4), simétrico
+em torno do eixo — quem se guia pelo piso tátil precisa de folga para o corpo e a bengala.
+O valor exato da norma (NBR 9050) deve ser conferido por quem a tenha; o padrão aqui é
+escolha de engenharia, não citação de norma.
+
+**Por que isso importa:** o clipe `borda.mp4` foi gravado com a câmera ligeiramente
+deslocada, e o detector acompanhou — eixo em `0,468` contra `0,501` dos demais. Um polígono
+fixo teria errado a faixa nesse clipe.
+
+**Quando não funciona:** exige câmera estática, piso tátil visivelmente mais escuro que o
+piso ao redor e trecho reto. Corredor curvo, piso tátil de cor parecida com o piso ou
+câmera em movimento quebram a premissa — aí use `tools/draw_zone.py` e a zona fixa.
+
 ## Saída visual
 
 A interface mostra o frame anotado ao vivo. Para gerar um arquivo de vídeo anotado — útil

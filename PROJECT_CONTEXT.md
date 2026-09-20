@@ -15,8 +15,10 @@ Mudou uma decisão de produto? Atualize aqui, não só no código.
 1. **Entrada** — vídeo gravado com celular em vias e caminhos da UNIFEI. A webcam é um
    caminho alternativo previsto no código, mas não é o fluxo principal.
 2. **Detecção** — YOLO pré-treinado em COCO (`yolo11n.pt`). **Não há treinamento próprio.**
-3. **Zona acessível** — polígono configurado em `config/zones.json`, em coordenadas
-   normalizadas (0–1), aplicado sobre o frame de trabalho.
+3. **Zona acessível** — **detectada automaticamente** a partir do piso tátil direcional
+   (`src/lane.py`). O sistema localiza a faixa guia no próprio vídeo e deriva dela a faixa
+   livre de circulação, alargando simetricamente em torno do seu eixo. O polígono fixo em
+   `config/zones.json` é reserva, usado só quando a detecção falha.
 4. **Regra principal** — o **ponto inferior central da bounding box** determina se o objeto
    está dentro da zona de circulação. Esse ponto aproxima onde o objeto toca o chão; o
    centro da caixa faria um objeto alto parecer mais distante do que está.

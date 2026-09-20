@@ -5,6 +5,14 @@
     "work_width": 960,
     "frame_stride": 2
   },
+  "lane": {
+    "enabled": true,
+    "y_top": 0.58,
+    "free_width_ratio": 4.0,
+    "darkness_threshold": 0.13,
+    "background_samples": 25,
+    "min_coverage": 0.9
+  },
   "detection": {
     "model_path": "models/yolo11n.pt",
     "imgsz": 640,

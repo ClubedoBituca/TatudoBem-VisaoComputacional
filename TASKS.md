@@ -100,7 +100,10 @@ Entregue:
 - `tools/draw_zone.py` — desenha a zona clicando sobre o primeiro frame
 - `tests/test_blockage.py` — 9 testes, todos passando
 
-Zona ativa `corredor_b21`: trapézio **simétrico em torno do eixo do piso tátil**
+**A zona deixou de ser desenhada à mão** — `src/lane.py` detecta o piso tátil e deriva a
+faixa livre. Ver README. A zona fixa abaixo virou reserva.
+
+Zona reserva `corredor_b21`: trapézio **simétrico em torno do eixo do piso tátil**
 (`x=0.498`, medido no frame), com meia-largura de `0.034` no topo e `0.1865` na base,
 cortado em `y=0.583`. A abertura em perspectiva reproduz a marcação feita a mão pela
 equipe sobre um frame do corredor.

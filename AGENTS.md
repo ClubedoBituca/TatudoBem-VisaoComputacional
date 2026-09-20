@@ -19,6 +19,11 @@ Aqui ficam só as regras de como mexer no código.
    Precisa de algo novo? Levante a questão antes de instalar.
 7. **Configuração fica em `config/zones.json`**, não hardcoded no código. Polígonos em
    coordenadas normalizadas (0–1).
+8. **A faixa livre é derivada do piso tátil detectado**, não desenhada à mão. O polígono
+   fixo em `zones` é reserva, para quando a detecção falhar. Um polígono desenhado serve
+   só para o enquadramento em que foi feito — trocou a câmera, não vale mais.
+9. **A faixa livre é simétrica em torno do eixo do piso tátil.** Folga desigual não
+   representa o caminho de quem se guia por ele.
 
 ## Donos dos arquivos
 
@@ -28,6 +33,7 @@ Quatro pessoas trabalham em paralelo. Antes de editar, confira de quem é o arqu
 | Arquivo | Frente |
 |---|---|
 | `src/capture.py`, `src/detector.py` | 1 — Detecção |
+| `src/lane.py`, `tools/detect_lane.py` | compartilhado — avisar no grupo ao alterar |
 | `src/blockage.py` | 2 — Regra espacial |
 | `src/events.py`, `src/ui.py`, `app.py` | 3 — Interface |
 | `tests/` | 4 — Testes |
@@ -36,7 +42,8 @@ Quatro pessoas trabalham em paralelo. Antes de editar, confira de quem é o arqu
 ## Estado atual do código
 
 `src/capture.py`, `src/detector.py`, `src/config.py` e `src/blockage.py` estão
-**funcionais**, e `src/ui.py` tem o `draw_overlay` funcional (usado pelo Streamlit e por
+**funcionais**, mais `src/lane.py` (detecção da faixa guia). `src/ui.py` tem o
+`draw_overlay` funcional (usado pelo Streamlit e por
 `tools/render_video.py`). `src/events.py` e o restante de `src/ui.py` são **stubs**: as
 assinaturas e os
 contratos estão fechados, os corpos levantam `NotImplementedError` com um marcador

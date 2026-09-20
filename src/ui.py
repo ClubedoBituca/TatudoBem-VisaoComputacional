@@ -29,6 +29,7 @@ VERDE = (60, 180, 75)
 VERMELHO = (40, 40, 220)
 LARANJA = (0, 150, 255)
 AZUL = (200, 130, 30)
+CIANO = (255, 220, 0)
 BRANCO = (255, 255, 255)
 PRETO = (0, 0, 0)
 
@@ -76,6 +77,7 @@ def draw_overlay(
     polygon: Polygon,
     state: BlockageState | None = None,
     passersby: list[Detection] | None = None,
+    guide_strip: Polygon | None = None,
 ) -> np.ndarray:
     """Desenha poligono da zona e caixas das deteccoes sobre uma copia do frame.
 
@@ -94,6 +96,12 @@ def draw_overlay(
     tela = frame.copy()
     bloqueada = state is not None and state.status is RouteStatus.BLOQUEADA
     cor_zona = VERMELHO if bloqueada else VERDE
+
+    if guide_strip is not None:
+        # O piso tatil em ciano, so contorno: mostra de onde a faixa livre foi
+        # derivada. Sem ele, a zona parece um retangulo arbitrario na tela.
+        faixa = np.array(guide_strip, dtype=np.int32).reshape(-1, 1, 2)
+        cv2.polylines(tela, [faixa], isClosed=True, color=CIANO, thickness=1, lineType=cv2.LINE_AA)
 
     contorno = np.array(polygon, dtype=np.int32).reshape(-1, 1, 2)
     sombra = tela.copy()

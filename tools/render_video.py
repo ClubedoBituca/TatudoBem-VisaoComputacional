@@ -33,6 +33,7 @@ from src.blockage import BlockageTracker, RouteStatus, denormalize_polygon  # no
 from src.capture import CaptureError, VideoSource  # noqa: E402
 from src.config import PROJECT_ROOT, load_config  # noqa: E402
 from src.detector import ObstacleDetector  # noqa: E402
+from src.lane import LaneNotFound, detect_from_video  # noqa: E402
 from src.ui import draw_overlay  # noqa: E402
 
 SAIDA_PADRAO = PROJECT_ROOT / "outputs" / "demos"
@@ -41,18 +42,35 @@ SAIDA_PADRAO = PROJECT_ROOT / "outputs" / "demos"
 def main() -> int:
     parser = argparse.ArgumentParser(description="Renderiza video anotado com a decisao do sistema.")
     parser.add_argument("video", help="caminho do .mp4 de entrada")
-    parser.add_argument("--zona", help="nome da zona em config/zones.json (padrao: a zona ativa)")
+    parser.add_argument("--zona", help="usa esta zona fixa de config/zones.json em vez de detectar")
     parser.add_argument("--saida", help="nome do arquivo de saida (padrao: <entrada>_anotado.mp4)")
     parser.add_argument("--inicio", type=float, default=0.0, help="segundo inicial")
     parser.add_argument("--fim", type=float, default=0.0, help="segundo final (0 = ate o fim)")
     args = parser.parse_args()
 
     cfg = load_config()
-    zona = args.zona or cfg["active_zone"]
-    if zona not in cfg["zones"]:
-        print(f"ERRO: zona '{zona}' nao existe em config/zones.json.")
-        print(f"       Disponiveis: {', '.join(cfg['zones'])}")
-        return 1
+    entrada_cru = Path(args.video).resolve()
+
+    # Por padrao a faixa e DETECTADA no proprio video: poligono fixo so serve
+    # para o enquadramento em que foi desenhado.
+    faixa = None
+    if args.zona:
+        zona = args.zona
+        if zona not in cfg["zones"]:
+            print(f"ERRO: zona '{zona}' nao existe em config/zones.json.")
+            print(f"       Disponiveis: {', '.join(cfg['zones'])}")
+            return 1
+        poligono_norm = [tuple(p) for p in cfg["zones"][zona]["polygon_norm"]]
+    else:
+        try:
+            faixa = detect_from_video(entrada_cru)
+            poligono_norm = faixa.free_path_polygon()
+            zona = f"detectada (cobertura {faixa.coverage:.2f})"
+        except LaneNotFound as exc:
+            zona = cfg["active_zone"]
+            poligono_norm = [tuple(p) for p in cfg["zones"][zona]["polygon_norm"]]
+            print(f"AVISO: deteccao automatica falhou ({exc})")
+            print(f"       Usando a zona fixa '{zona}' de config/zones.json.")
 
     entrada = Path(args.video).resolve()
     SAIDA_PADRAO.mkdir(parents=True, exist_ok=True)
@@ -68,10 +86,10 @@ def main() -> int:
 
     with fonte:
         info = fonte.info
-        poligono = denormalize_polygon(
-            [tuple(p) for p in cfg["zones"][zona]["polygon_norm"]],
-            info.work_width,
-            info.work_height,
+        poligono = denormalize_polygon(poligono_norm, info.work_width, info.work_height)
+        piso_tatil = (
+            denormalize_polygon(faixa.strip_polygon(), info.work_width, info.work_height)
+            if faixa is not None else None
         )
         rastreador = BlockageTracker(poligono)
 
@@ -108,7 +126,9 @@ def main() -> int:
             # instancias diferentes das que o rastreador avaliou.
             deteccoes, pessoas = detector.predict_split(frame)
             estado = rastreador.update(deteccoes)
-            escritor.write(draw_overlay(frame, deteccoes, poligono, estado, passersby=pessoas))
+            escritor.write(
+                draw_overlay(frame, deteccoes, poligono, estado, passersby=pessoas, guide_strip=piso_tatil)
+            )
             escritos += 1
 
             if estado.just_confirmed:
